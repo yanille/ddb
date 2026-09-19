@@ -166,6 +166,20 @@ observed facts; "Rationale" is inferred where noted.
   single value for the shell wrapper. `dialoguer` was chosen over `inquire`
   because it renders to stderr by default, guaranteeing the clean-stdout contract.
 
+## D16 — Human output: aligned records, table for uniform results, grouped describe
+
+- **Decision:** The `human` renderer aligns a record's values into a column;
+  renders multi-item `query`/`scan` results as an aligned table (header + rule,
+  missing fields shown as `-`) when every value is scalar, falling back to
+  aligned `---`-separated blocks otherwise; and lays out `describe` as a heading
+  plus grouped, aligned sections. Monochrome only (no color).
+- **Evidence:** `src/output/human.rs` (`render_value`, `render_items` /
+  `render_table` / `table_eligible`, `render_table_schema`).
+- **Rationale:** Layout (alignment, tables, grouping) improves scannability
+  without depending on color/terminal capabilities. JSON output is deliberately
+  unchanged, so `--output json` stays structured and scriptable; the table view
+  only applies to scalar-valued items because wide/nested values don't fit cells.
+
 ## Open items / conflicts
 
 None. No feature to date has required AWS functionality beyond reads. If one ever

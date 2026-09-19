@@ -44,11 +44,12 @@ are marked complete.
   numbers, base64 binary, sorted keys. Total (never panics).
 - **Key parsing**: bare and `name=value`; `S`/`N`/`B` typing; base64 binary;
   `=`-in-value disambiguation.
-- **Output**: `human` (YAML-like) and `json` (deterministic, jq-friendly);
-  stdout/stderr split enforced in `main`.
+- **Output**: `human` (aligned records; uniform `query`/`scan` results as an
+  aligned table with `-` for missing fields; grouped, aligned `describe`) and
+  `json` (deterministic, jq-friendly, unchanged); stdout/stderr split in `main`.
 - **Errors & exit codes**: categorized `DdbError` with stable exit codes (0–6)
   and machine codes; AWS errors mapped; no secret leakage.
-- **Tests** (81 passing): attribute conversion (incl. composite/nested, precision
+- **Tests** (85 passing): attribute conversion (incl. composite/nested, precision
   fallback, base64, sets), key parsing, CLI parsing (defaults, conflicts, global
   flags, optional table, `use`/`shell-init`), active-table resolution precedence,
   picker helpers, shell-init snippet contents, error codes, human/JSON renderers,
