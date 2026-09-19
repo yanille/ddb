@@ -8,7 +8,7 @@ interactive picker from `ddb tables`), and an improved human-output layout
 (aligned records, table view for query/scan, grouped describe).
 
 - All Definition-of-Done items are met (see `progress.md`).
-- `cargo build`, `cargo test` (85 tests passing), and `cargo clippy
+- `cargo build`, `cargo test` (88 tests passing), and `cargo clippy
   --all-targets` are clean.
 - The read-only guarantee is enforced by `tests/no_write_path.rs`.
 - AWS credential/region resolution from the shared files (`~/.aws/credentials`,
