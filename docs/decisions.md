@@ -129,6 +129,43 @@ observed facts; "Rationale" is inferred where noted.
   The default chain honors the shared files *and* the other sources; the
   regression test locks in the shared-file behavior specifically.
 
+## D14 — Active table as a shell-session env var, activated via a shell wrapper
+
+- **Decision:** A table can be "activated" for the session; the active table is
+  stored in the `DDB_TABLE` environment variable and surfaced in the prompt as
+  `(ddb:Name)`, virtualenv-style. Data commands take an optional `[table]`;
+  `active::resolve_table` applies *explicit arg > `$DDB_TABLE` > error*. `ddb
+  shell-init <shell>` emits a `ddb` shell function that captures the picker/`use`
+  selection and exports `DDB_TABLE` in the parent shell; `deactivate` unsets it.
+- **Evidence:** `src/active.rs`, `src/commands/shell.rs`, `src/commands/use_table.rs`,
+  dispatch in `src/commands/mod.rs`.
+- **Rationale:** A child process can't mutate its parent shell's env or prompt, so
+  the established pattern (`pyenv`/`nvm`/`conda`) is a sourced shell function. Env
+  scoping keeps activation per-terminal, matching the virtualenv mental model the
+  user asked for. The explicit arg always overrides, so scripts are unaffected.
+
+## D15 — Interactive picker is TTY-gated; `dialoguer` renders on stderr
+
+- **Decision:** `ddb tables` (and bare `ddb use`) open a fuzzy picker only when
+  **stdin and stderr** are TTYs and output is `human` and not `--plain`;
+  otherwise `tables` prints the plain list. The picker (`dialoguer::FuzzySelect`)
+  draws on stderr; the selected name is printed to stdout. Crucially the gate
+  does **not** require stdout to be a TTY, because the shell wrapper activates a
+  selection by capturing stdout (`$(command ddb …)`) — which makes stdout a pipe.
+  Gating on stdout (the original bug) made the picker never run under the wrapper,
+  so selections were never captured and later commands had no active table. When
+  a selection is made but stdout is still a TTY (no wrapper), an
+  `activation_hint` is printed to stderr telling the user how to enable/replicate
+  activation.
+- **Evidence:** `src/picker.rs` (`is_interactive`, `activation_hint`),
+  `src/commands/tables.rs`, `src/commands/use_table.rs`, `selection_rendered` in
+  `src/commands/mod.rs`. Verified via a PTY test (stdout piped, stderr/stdin a
+  TTY): the picker runs and stdout stays empty until selection.
+- **Rationale:** Preserves `ddb tables` scriptability (`| grep`, `| jq`) while
+  giving humans the picker. Drawing UI on stderr keeps stdout a clean, capturable
+  single value for the shell wrapper. `dialoguer` was chosen over `inquire`
+  because it renders to stderr by default, guaranteeing the clean-stdout contract.
+
 ## Open items / conflicts
 
 None. No feature to date has required AWS functionality beyond reads. If one ever

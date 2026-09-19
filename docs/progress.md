@@ -20,7 +20,12 @@ are marked complete.
   automated regression test, `tests/aws_config.rs`). Also verified against the
   no-credentials path (exit 5, clean stdout, JSON error on stderr).
 - **Commands**:
-  - `tables` — lists tables, follows pagination.
+  - `tables` — lists tables (follows pagination), or an interactive fuzzy picker
+    when run by a human (`--plain` forces the list).
+  - `use` — activate a table for the session (by name, or via the picker).
+  - `deactivate` — clear the active table (wrapper unsets `DDB_TABLE`; binary
+    fallback prints guidance).
+  - `shell-init <zsh|bash>` — emit shell integration for the active table.
   - `describe` — schema, indexes, status, item count, size, billing mode.
   - `indexes` — secondary indexes only.
   - `get` — single item by primary key; schema-typed keys; composite-key
@@ -29,6 +34,12 @@ are marked complete.
     `--sk-begins-with`; `--index`; pagination via `--limit`/`--max-pages`.
   - `scan` — with conservative `--limit`/`--max-pages` defaults and truncation
     warnings; `--index` validated via describe.
+- **Active table (venv-style)**: `[table]` is optional on all data commands and
+  resolves from `$DDB_TABLE` when omitted (explicit arg always wins). `ddb
+  shell-init` installs a `ddb` shell function that captures the picker/`use`
+  selection into `DDB_TABLE` and shows `(ddb:Name)` in the prompt; `deactivate`
+  clears it. Verified end-to-end: resolution + live `describe`, non-interactive
+  plain list, wrapper prompt + deactivate in zsh. Picker gated on a real TTY.
 - **Attribute conversion**: all `AttributeValue` variants → JSON, precision-safe
   numbers, base64 binary, sorted keys. Total (never panics).
 - **Key parsing**: bare and `name=value`; `S`/`N`/`B` typing; base64 binary;
@@ -37,12 +48,14 @@ are marked complete.
   stdout/stderr split enforced in `main`.
 - **Errors & exit codes**: categorized `DdbError` with stable exit codes (0–6)
   and machine codes; AWS errors mapped; no secret leakage.
-- **Tests** (70 passing): attribute conversion (incl. composite/nested, precision
+- **Tests** (81 passing): attribute conversion (incl. composite/nested, precision
   fallback, base64, sets), key parsing, CLI parsing (defaults, conflicts, global
-  flags), error codes, human/JSON renderers, `no_write_path` guarantee, shared
-  AWS config/credentials file resolution (`tests/aws_config.rs`), and end-to-end
-  command handlers via an in-memory fake reader (tables, get hit/miss, query,
-  empty results, missing table, bad key, describe).
+  flags, optional table, `use`/`shell-init`), active-table resolution precedence,
+  picker helpers, shell-init snippet contents, error codes, human/JSON renderers,
+  `no_write_path` guarantee, shared AWS config/credentials file resolution
+  (`tests/aws_config.rs`), and end-to-end command handlers via an in-memory fake
+  reader (tables, get hit/miss, query, empty results, missing table, bad key,
+  describe).
 - **Documentation**: README + `docs/` (architecture, decisions, progress,
   backlog, current-task).
 

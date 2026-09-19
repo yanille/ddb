@@ -38,15 +38,48 @@ Credentials, secret keys, and session tokens are never printed.
 ## Commands
 
 ```bash
-ddb tables                                   # list all accessible tables
-ddb describe <table>                         # table schema, indexes, metadata
-ddb indexes <table>                          # secondary indexes only
-ddb get <table> --pk <value> [--sk <value>]  # single item by primary key
-ddb query <table> --pk <value> [--sk <value> | --sk-begins-with <prefix>]
-ddb scan <table> [--limit N] [--max-pages N]
+ddb tables                                   # list tables, or pick one interactively
+ddb use [table]                              # activate a table for the session
+ddb deactivate                               # clear the active table
+ddb describe [table]                         # table schema, indexes, metadata
+ddb indexes [table]                          # secondary indexes only
+ddb get [table] --pk <value> [--sk <value>]  # single item by primary key
+ddb query [table] --pk <value> [--sk <value> | --sk-begins-with <prefix>]
+ddb scan [table] [--limit N] [--max-pages N]
+ddb shell-init <zsh|bash>                     # print shell integration
 ```
 
-Every command supports `--output human` (default) or `--output json`.
+Every data command supports `--output human` (default) or `--output json`. The
+`[table]` argument is optional when an active table is set (see below).
+
+### Active table (virtualenv-style)
+
+Long table names get tedious. `ddb` lets you "activate" a table for your shell
+session — like a Python virtualenv's `(env)` — so subsequent commands can omit
+it. Install the shell integration once:
+
+```bash
+# ~/.zshrc  (or ~/.bashrc with: eval "$(ddb shell-init bash)")
+eval "$(ddb shell-init zsh)"
+```
+
+Then:
+
+```bash
+ddb tables                 # fuzzy-pick a table in the terminal → it activates
+# prompt now shows:  (ddb:EmployeeHistory) $
+ddb query --pk 12345       # runs against the active table, no name needed
+ddb use Orders             # switch tables directly
+ddb use                    # switch via the picker
+ddb deactivate             # clear the active table
+```
+
+The active table lives in the `DDB_TABLE` environment variable, scoped to that
+shell. An explicit `[table]` argument always overrides it, so scripts are never
+affected by session state. The interactive picker only appears on a real
+terminal — piped or `--output json`, `ddb tables` prints the plain list exactly
+as before (`ddb tables | grep …`, `ddb tables --output json | jq .`). Force the
+plain list on a TTY with `ddb tables --plain`.
 
 ### Keys
 
