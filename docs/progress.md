@@ -22,7 +22,8 @@ are marked complete.
 - **Commands**:
   - `tables` — lists tables (follows pagination), or an interactive fuzzy picker
     when run by a human (`--plain` forces the list).
-  - `use` — activate a table for the session (by name, or via the picker).
+  - `use` — activate a table for the session (by name, validated against
+    ListTables with a case-insensitive suggestion, or via the picker).
   - `deactivate` — clear the active table (wrapper unsets `DDB_TABLE`; binary
     fallback prints guidance).
   - `shell-init <zsh|bash>` — emit shell integration for the active table.
@@ -49,7 +50,7 @@ are marked complete.
   `json` (deterministic, jq-friendly, unchanged); stdout/stderr split in `main`.
 - **Errors & exit codes**: categorized `DdbError` with stable exit codes (0–6)
   and machine codes; AWS errors mapped; no secret leakage.
-- **Tests** (85 passing): attribute conversion (incl. composite/nested, precision
+- **Tests** (88 passing): attribute conversion (incl. composite/nested, precision
   fallback, base64, sets), key parsing, CLI parsing (defaults, conflicts, global
   flags, optional table, `use`/`shell-init`), active-table resolution precedence,
   picker helpers, shell-init snippet contents, error codes, human/JSON renderers,

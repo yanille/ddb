@@ -235,6 +235,55 @@ async fn query_empty_results_human() {
 }
 
 #[tokio::test]
+async fn use_valid_table_activates() {
+    let reader = FakeReader::new(); // tables: Users, Orders
+    let out = commands::run(
+        &reader,
+        &Command::Use {
+            table: Some("Users".into()),
+        },
+        OutputFormat::Human,
+    )
+    .await
+    .unwrap();
+    assert_eq!(out.stdout, "Users");
+}
+
+#[tokio::test]
+async fn use_unknown_table_errors_not_found() {
+    let reader = FakeReader::new();
+    let err = commands::run(
+        &reader,
+        &Command::Use {
+            table: Some("Nope".into()),
+        },
+        OutputFormat::Human,
+    )
+    .await
+    .unwrap_err();
+    assert!(matches!(err, DdbError::TableNotFound(_)));
+    assert_eq!(err.exit_code(), 3);
+}
+
+#[tokio::test]
+async fn use_case_typo_suggests_correct_table() {
+    let reader = FakeReader::new();
+    let err = commands::run(
+        &reader,
+        &Command::Use {
+            table: Some("users".into()), // wrong case of "Users"
+        },
+        OutputFormat::Human,
+    )
+    .await
+    .unwrap_err();
+    match err {
+        DdbError::InvalidUsage(msg) => assert!(msg.contains("Users"), "expected suggestion: {msg}"),
+        other => panic!("expected InvalidUsage with suggestion, got {other:?}"),
+    }
+}
+
+#[tokio::test]
 async fn describe_json_has_key_schema() {
     let reader = FakeReader::new();
     let cmd = Command::Describe {
