@@ -3,7 +3,7 @@
 //! Every subcommand is a read-only DynamoDB inspection operation. There is no
 //! subcommand that mutates DynamoDB state.
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::output::OutputFormat;
 
@@ -38,19 +38,52 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// List all accessible DynamoDB tables.
-    Tables,
+    /// List all accessible DynamoDB tables, or interactively pick one.
+    ///
+    /// Run by a human in a terminal, this opens a fuzzy picker and activates the
+    /// chosen table for the session (with the shell integration installed). When
+    /// piped or with --output json (or --plain), it prints the plain list.
+    Tables {
+        /// Always print the plain list, even in an interactive terminal.
+        #[arg(long)]
+        plain: bool,
+    },
+
+    /// Activate a table for this shell session (venv-style).
+    ///
+    /// With a name, activates it directly; with no name in a terminal, opens the
+    /// fuzzy picker. Requires the shell integration (`ddb shell-init`) to update
+    /// the prompt and export DDB_TABLE.
+    Use {
+        /// Table name to activate; omit to pick interactively.
+        table: Option<String>,
+    },
+
+    /// Clear the active table for this shell session.
+    ///
+    /// With the shell integration installed, `ddb deactivate` unsets DDB_TABLE
+    /// in your current shell (the prompt chip disappears).
+    Deactivate,
+
+    /// Print shell integration to enable the venv-style active table.
+    ///
+    /// Add `eval "$(ddb shell-init zsh)"` (or bash) to your shell rc file.
+    ShellInit {
+        /// Which shell to emit integration for.
+        #[arg(value_enum)]
+        shell: ShellKind,
+    },
 
     /// Describe a table's schema, indexes, and metadata.
     Describe {
-        /// Table name.
-        table: String,
+        /// Table name (defaults to the active table).
+        table: Option<String>,
     },
 
     /// List a table's secondary indexes.
     Indexes {
-        /// Table name.
-        table: String,
+        /// Table name (defaults to the active table).
+        table: Option<String>,
     },
 
     /// Get a single item by primary key.
@@ -58,8 +91,8 @@ pub enum Command {
     /// Keys may be given as a bare value (--pk 12345) or as name=value
     /// (--pk employee_id=12345). Value types are taken from the table schema.
     Get {
-        /// Table name.
-        table: String,
+        /// Table name (defaults to the active table).
+        table: Option<String>,
         /// Partition key value (bare value or name=value).
         #[arg(long)]
         pk: String,
@@ -70,8 +103,8 @@ pub enum Command {
 
     /// Query items by partition key (and optional sort-key condition).
     Query {
-        /// Table name.
-        table: String,
+        /// Table name (defaults to the active table).
+        table: Option<String>,
         /// Partition key value (bare value or name=value).
         #[arg(long)]
         pk: String,
@@ -97,8 +130,8 @@ pub enum Command {
     /// Scans can be expensive; by default this reads a single page of up to
     /// --limit items. Raise --limit and --max-pages deliberately to read more.
     Scan {
-        /// Table name.
-        table: String,
+        /// Table name (defaults to the active table).
+        table: Option<String>,
         /// Scan a secondary index instead of the base table.
         #[arg(long)]
         index: Option<String>,
@@ -109,6 +142,14 @@ pub enum Command {
         #[arg(long = "max-pages", default_value_t = 1, value_parser = parse_max_pages)]
         max_pages: usize,
     },
+}
+
+/// Shells supported by `ddb shell-init`.
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+#[value(rename_all = "lower")]
+pub enum ShellKind {
+    Zsh,
+    Bash,
 }
 
 /// Parse a `--max-pages` value, enforcing a minimum of 1.
@@ -135,8 +176,55 @@ mod tests {
     #[test]
     fn parses_tables() {
         let cli = Cli::try_parse_from(["ddb", "tables"]).unwrap();
-        assert!(matches!(cli.command, Command::Tables));
+        assert!(matches!(cli.command, Command::Tables { plain: false }));
         assert_eq!(cli.output, OutputFormat::Human);
+    }
+
+    #[test]
+    fn parses_tables_plain() {
+        let cli = Cli::try_parse_from(["ddb", "tables", "--plain"]).unwrap();
+        assert!(matches!(cli.command, Command::Tables { plain: true }));
+    }
+
+    #[test]
+    fn parses_use_with_and_without_table() {
+        let bare = Cli::try_parse_from(["ddb", "use"]).unwrap();
+        assert!(matches!(bare.command, Command::Use { table: None }));
+        let named = Cli::try_parse_from(["ddb", "use", "Orders"]).unwrap();
+        match named.command {
+            Command::Use { table } => assert_eq!(table.as_deref(), Some("Orders")),
+            _ => panic!("expected use"),
+        }
+    }
+
+    #[test]
+    fn parses_deactivate() {
+        let cli = Cli::try_parse_from(["ddb", "deactivate"]).unwrap();
+        assert!(matches!(cli.command, Command::Deactivate));
+    }
+
+    #[test]
+    fn parses_shell_init() {
+        let cli = Cli::try_parse_from(["ddb", "shell-init", "zsh"]).unwrap();
+        assert!(matches!(
+            cli.command,
+            Command::ShellInit {
+                shell: ShellKind::Zsh
+            }
+        ));
+        assert!(Cli::try_parse_from(["ddb", "shell-init", "fish"]).is_err());
+    }
+
+    #[test]
+    fn query_allows_omitted_table() {
+        let cli = Cli::try_parse_from(["ddb", "query", "--pk", "1"]).unwrap();
+        match cli.command {
+            Command::Query { table, pk, .. } => {
+                assert_eq!(table, None);
+                assert_eq!(pk, "1");
+            }
+            _ => panic!("expected query"),
+        }
     }
 
     #[test]
@@ -162,7 +250,7 @@ mod tests {
         .unwrap();
         match cli.command {
             Command::Get { table, pk, sk } => {
-                assert_eq!(table, "EmployeeHistory");
+                assert_eq!(table.as_deref(), Some("EmployeeHistory"));
                 assert_eq!(pk, "employee_id=12345");
                 assert_eq!(sk.as_deref(), Some("timestamp=2026-09-17"));
             }

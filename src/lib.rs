@@ -10,9 +10,11 @@
 //! `query`, and `scan`. The `tests/no_write_path.rs` integration test enforces
 //! that no mutating DynamoDB operation appears anywhere in `src/`.
 
+pub mod active;
 pub mod cli;
 pub mod commands;
 pub mod dynamodb;
 pub mod error;
 pub mod keys;
 pub mod output;
+pub mod picker;

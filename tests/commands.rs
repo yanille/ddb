@@ -97,7 +97,7 @@ fn item(pairs: &[(&str, AttributeValue)]) -> Item {
 #[tokio::test]
 async fn tables_human() {
     let reader = FakeReader::new();
-    let out = commands::run(&reader, &Command::Tables, OutputFormat::Human)
+    let out = commands::run(&reader, &Command::Tables { plain: true }, OutputFormat::Human)
         .await
         .unwrap();
     assert_eq!(out.stdout, "Users\nOrders");
@@ -106,7 +106,7 @@ async fn tables_human() {
 #[tokio::test]
 async fn tables_json() {
     let reader = FakeReader::new();
-    let out = commands::run(&reader, &Command::Tables, OutputFormat::Json)
+    let out = commands::run(&reader, &Command::Tables { plain: true }, OutputFormat::Json)
         .await
         .unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&out.stdout).unwrap();
@@ -121,7 +121,7 @@ async fn get_hit_json_uses_typed_key() {
         ("name", AttributeValue::S("Jane".into())),
     ]));
     let cmd = Command::Get {
-        table: "Users".into(),
+        table: Some("Users".into()),
         pk: "12345".into(),
         sk: None,
     };
@@ -136,7 +136,7 @@ async fn get_hit_json_uses_typed_key() {
 async fn get_miss_human_reports_on_stderr() {
     let reader = FakeReader::new();
     let cmd = Command::Get {
-        table: "Users".into(),
+        table: Some("Users".into()),
         pk: "999".into(),
         sk: None,
     };
@@ -151,7 +151,7 @@ async fn get_miss_human_reports_on_stderr() {
 async fn get_miss_json_is_null() {
     let reader = FakeReader::new();
     let cmd = Command::Get {
-        table: "Users".into(),
+        table: Some("Users".into()),
         pk: "999".into(),
         sk: None,
     };
@@ -165,7 +165,7 @@ async fn get_miss_json_is_null() {
 async fn get_bad_number_key_is_usage_error() {
     let reader = FakeReader::new();
     let cmd = Command::Get {
-        table: "Users".into(),
+        table: Some("Users".into()),
         pk: "not-a-number".into(),
         sk: None,
     };
@@ -180,7 +180,7 @@ async fn get_bad_number_key_is_usage_error() {
 async fn get_missing_table_errors() {
     let reader = FakeReader::new();
     let cmd = Command::Get {
-        table: "Nope".into(),
+        table: Some("Nope".into()),
         pk: "1".into(),
         sk: None,
     };
@@ -199,7 +199,7 @@ async fn query_json_returns_array() {
         item(&[("id", AttributeValue::N("2".into()))]),
     ];
     let cmd = Command::Query {
-        table: "Users".into(),
+        table: Some("Users".into()),
         pk: "1".into(),
         sk: None,
         sk_begins_with: None,
@@ -218,7 +218,7 @@ async fn query_json_returns_array() {
 async fn query_empty_results_human() {
     let reader = FakeReader::new();
     let cmd = Command::Query {
-        table: "Users".into(),
+        table: Some("Users".into()),
         pk: "1".into(),
         sk: None,
         sk_begins_with: None,
@@ -238,7 +238,7 @@ async fn query_empty_results_human() {
 async fn describe_json_has_key_schema() {
     let reader = FakeReader::new();
     let cmd = Command::Describe {
-        table: "Users".into(),
+        table: Some("Users".into()),
     };
     let out = commands::run(&reader, &cmd, OutputFormat::Json)
         .await

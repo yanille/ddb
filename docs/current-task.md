@@ -1,23 +1,24 @@
 # Current task
 
-## State (2026-09-17)
+## State (2026-09-18)
 
-The initial version of `ddb` is **implemented, tested, and documented**. The
-repository started empty; this session built the full initial release per the
-build specification.
+The initial version of `ddb` is **implemented, tested, and documented**, plus a
+**virtualenv-style active table** feature (`use` / `shell-init` / `DDB_TABLE`,
+interactive picker from `ddb tables`).
 
 - All Definition-of-Done items are met (see `progress.md`).
-- `cargo build`, `cargo test` (70 tests passing), and `cargo clippy
+- `cargo build`, `cargo test` (81 tests passing), and `cargo clippy
   --all-targets` are clean.
 - The read-only guarantee is enforced by `tests/no_write_path.rs`.
 - AWS credential/region resolution from the shared files (`~/.aws/credentials`,
   `~/.aws/config`) is verified live and by `tests/aws_config.rs`.
-- End-to-end AWS wiring verified via a live `ddb tables` call and the
-  no-credentials path (exit 5, structured JSON error on stderr, empty stdout).
+- Active-table feature verified end-to-end: `$DDB_TABLE` resolution + live
+  `describe`, non-interactive plain list (scriptable), and the zsh wrapper's
+  prompt + `deactivate`. The interactive picker itself needs a PTY to test.
 
 ## In progress
 
-Nothing actively in flight.
+Nothing actively in flight. The active-table change is not yet committed.
 
 ## Recommended next steps
 

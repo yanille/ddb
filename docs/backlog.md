@@ -15,6 +15,14 @@ the read-only guarantee.
 - **`scan`/`query` count semantics**: `Page.scanned_count` is summed across pages;
   there is no separate returned item-count field beyond `items.len()`.
 
+## Active-table feature follow-ups
+
+- `fish` shell-init (only `zsh`/`bash` are emitted today).
+- Optional table-name **cache** to make the picker/`tables` instant and cut
+  `ListTables` calls (deliberately deferred; revisit if latency is felt).
+- Interactive picker has no automated test (needs a PTY); pure helpers and the
+  TTY gating are covered, and the picker was verified manually.
+
 ## Suggested features (future)
 
 - `ddb count <table>`: count via `Select=COUNT` scan/query (still read-only),

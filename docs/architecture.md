@@ -16,12 +16,16 @@ ddb/
 ├── src/
 │   ├── main.rs            # entry point: parse → build client → dispatch → print → exit code
 │   ├── lib.rs            # library root; re-exports modules; documents the safety guarantee
-│   ├── cli.rs            # clap CLI definition (Cli + Command)
+│   ├── cli.rs            # clap CLI definition (Cli + Command + ShellKind)
 │   ├── error.rs         # DdbError, exit codes, AWS SDK error mapping
 │   ├── keys.rs          # schema-aware key-argument parsing & typing
+│   ├── active.rs        # active-table resolution ($DDB_TABLE, venv-style)
+│   ├── picker.rs        # interactive fuzzy table picker + TTY detection
 │   ├── commands/
-│   │   ├── mod.rs        # Rendered type + dispatch (run)
-│   │   ├── tables.rs
+│   │   ├── mod.rs        # Rendered type + dispatch (run) + table resolution
+│   │   ├── tables.rs     # list, or interactive pick
+│   │   ├── use_table.rs  # `use`: activate/pick a table
+│   │   ├── shell.rs      # `shell-init`: emit shell integration
 │   │   ├── describe.rs   # describe + indexes
 │   │   ├── get.rs
 │   │   ├── query.rs
@@ -36,7 +40,8 @@ ddb/
 │       └── json.rs       # JSON rendering
 ├── tests/
 │   ├── no_write_path.rs  # enforces: no DynamoDB write operations in src/
-│   └── commands.rs       # end-to-end handler tests with an in-memory fake reader
+│   ├── commands.rs       # end-to-end handler tests with an in-memory fake reader
+│   └── aws_config.rs     # shared config/credentials file resolution
 └── docs/
 ```
 
@@ -44,7 +49,16 @@ ddb/
 
 - **`cli`** — declares the CLI surface with clap derive. Global flags
   (`--profile`, `--region`, `--output`) are available before or after the
-  subcommand. Custom `--max-pages` parser enforces a minimum of 1.
+  subcommand. The `[table]` positional is optional on data commands (resolved
+  against the active table). Custom `--max-pages` parser enforces a minimum of 1.
+- **`active`** — the active-table session model. `resolve_table(explicit)`
+  applies the precedence *explicit arg > `$DDB_TABLE` > usage error*; the dispatch
+  in `commands::run` calls it before every table command.
+- **`picker`** — the interactive fuzzy picker (`dialoguer::FuzzySelect`, UI drawn
+  on stderr) and `is_interactive()` TTY gating so scripted use stays plain.
+- **`commands::shell`** — emits the `ddb` shell function + prompt integration for
+  `shell-init`; **`commands::use_table`** — the `use` handler (activate by name or
+  pick). Neither performs writes.
 - **`dynamodb`** — the load-bearing safety boundary. The `DynamoDbReader` trait
   exposes only reads: `list_tables`, `describe_table`, `get_item`, `query`,
   `scan`. Domain types (`TableSchema`, `KeySchema`, `KeyDef`, `ScalarType`,
