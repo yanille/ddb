@@ -113,7 +113,9 @@ and `--max-pages`. When results are truncated, a note is printed to stderr.
 
 ## Output
 
-- **Human** (default): readable, YAML-like key/value blocks.
+- **Human** (default): aligned key/value records; uniform `query`/`scan` results
+  render as an aligned table (missing fields shown as `-`); `describe` is grouped
+  and aligned.
 - **JSON**: valid, deterministic (sorted keys), `jq`-friendly.
 
 Data goes to **stdout**; summaries, warnings, and errors go to **stderr**. In
